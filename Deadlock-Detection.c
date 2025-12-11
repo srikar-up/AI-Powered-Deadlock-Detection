@@ -163,3 +163,139 @@ double aiPredictDeadlockProb() {
     return prob;
 }
 
+int chooseVictimProcess() {
+    int victim = -1;
+    int max_alloc = -1;
+    for(int i=0;i<n;i++){
+        int sumAlloc = 0;
+        for(int j=0;j<m;j++) sumAlloc += allocation[i][j];
+        if (sumAlloc > max_alloc) { max_alloc = sumAlloc; victim = i; }
+    }
+    if (max_alloc <= 0) return -1;
+    return victim;
+}
+
+void terminateProcess(int pid) {
+    if (pid < 0 || pid >= n) return;
+    printf("[RESOLUTION] Terminating process P%d to break deadlock.\n", pid);
+    for(int j=0;j<m;j++){
+        available[j] += allocation[pid][j];
+        allocation[pid][j] = 0;
+        maximum[pid][j] = 0;
+        need[pid][j] = 0;
+    }
+}
+
+int preemptResource() {
+    int victim = chooseVictimProcess();
+    if (victim == -1) return -1;
+    printf("[RESOLUTION] Preempting some resources from P%d.\n", victim);
+    int taken = 0;
+    for(int j=0;j<m;j++){
+        if (allocation[victim][j] > 0) {
+            allocation[victim][j]--;
+            available[j]++;
+            need[victim][j] = maximum[victim][j] - allocation[victim][j];
+            taken++;
+        }
+    }
+    return taken;
+}
+
+void delayRequests() {
+    printf("[RESOLUTION] Delaying new requests for 1 cycle to reduce pressure.\n");
+}
+
+
+
+
+
+void generateRandomRequestsAndApply(int maxRequestsPerCycle) {
+    int requestsThisCycle = (rand() % maxRequestsPerCycle) + 1;
+
+    printf("\n[SIM] Generating %d random requests this cycle...\n", requestsThisCycle);
+
+    for (int r = 0; r < requestsThisCycle; r++) {
+
+        int pid = rand() % n;  
+
+        int reqVec[MAX_RESOURCES] = {0};
+        int madeRequest = 0;
+
+        for (int j = 0; j < m; j++) {
+            int bound = need[pid][j];
+            int val = (bound > 0) ? rand() % (bound + 1) : 0;
+
+            if ((rand() % 100) < 5) val++;
+
+            reqVec[j] = val;
+            if (val > 0) madeRequest = 1;
+        }
+
+        if (!madeRequest) {
+            printf("[SIM] P%d made no request.\n", pid);
+            continue;
+        }
+
+        printf("[SIM] P%d requests: [ ", pid);
+        for (int j = 0; j < m; j++) printf("%d ", reqVec[j]);
+        printf("]\n");
+
+        for (int j = 0; j < m; j++) {
+            last_request[pid][j] = reqVec[j];
+            resource_pressure[j] += reqVec[j];
+        }
+        request_count[pid]++;
+
+        int canGrantDirect = 1;
+        for (int j = 0; j < m; j++) {
+            if (reqVec[j] > available[j]) {
+                canGrantDirect = 0;
+                break;
+            }
+        }
+
+        if (!canGrantDirect) {
+            printf("[SIM] Request denied (insufficient available resources)\n");
+            continue;
+        }
+
+       
+        for (int j = 0; j < m; j++) {
+            available[j] -= reqVec[j];
+            allocation[pid][j] += reqVec[j];
+        }
+        calculateNeed();
+
+        int safeSeq[MAX_PROCESSES];
+        int safe = isSafeState(safeSeq);
+
+        if (!safe) {
+            for (int j = 0; j < m; j++) {
+                available[j] += reqVec[j];
+                allocation[pid][j] -= reqVec[j];
+            }
+            calculateNeed();
+
+            printf("[SIM] Request rolled back (unsafe → would lead to deadlock)\n");
+        } else {
+            printf("[SIM] Request granted safely.\n");
+        }
+    }
+}
+
+void decayPressure() {
+    for(int j=0;j<m;j++){
+        resource_pressure[j] = (resource_pressure[j] * 3) / 4; 
+    }
+}
+void printStatus(int cycle, double aiProb, int deadlockDetected) {
+    printf("\n=== Status Summary (Cycle %d) ===\n", cycle);
+    printf("[AI] Predicted Deadlock Probability: %.3f\n", aiProb);
+
+    if (deadlockDetected)
+        printf("[OS] Deadlock Detected!\n");
+    else
+        printf("[OS] System is in Safe State.\n");
+}
+

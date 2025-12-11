@@ -52,6 +52,7 @@ void readInput() {
     memset(request_count, 0, sizeof(request_count));
     memset(resource_pressure, 0, sizeof(resource_pressure));
 }
+
 void calculateNeed() {
     for(int i=0;i<n;i++){
         for(int j=0;j<m;j++){
@@ -118,6 +119,8 @@ void printSafeSequence(int safeSeq[], int length) {
     }
     printf("\n");
 }
+
+
 int detectDeadlock() {
     int safeSeq[MAX_PROCESSES];
     int safe = isSafeState(safeSeq);
@@ -162,6 +165,7 @@ double aiPredictDeadlockProb() {
     if (prob > 1) prob = 1.0;
     return prob;
 }
+
 
 int chooseVictimProcess() {
     int victim = -1;
@@ -298,6 +302,9 @@ void printStatus(int cycle, double aiProb, int deadlockDetected) {
     else
         printf("[OS] System is in Safe State.\n");
 }
+
+
+
 void printAIAnalysis(double prob) {
     printf("\n[AI-ANALYSIS] Understanding the probability calculation:\n");
 
@@ -343,3 +350,90 @@ void printAIAnalysis(double prob) {
 
 
 int main_loop_iterations = 30;
+
+int main(int argc, char *argv[]) {
+    srand((unsigned int)time(NULL));
+    printf("AI-Powered Deadlock Detection System (Integrated)\n\n");
+
+    readInput();
+    calculateNeed();
+    printMatrices();
+
+    printf("\nEnter number of simulation cycles to run (e.g., 20): ");
+    scanf("%d", &main_loop_iterations);
+
+    for(cycle_count = 1; cycle_count <= main_loop_iterations; cycle_count++) {
+        printf("\n\n================ Cycle %d ================\n", cycle_count);
+
+        generateRandomRequestsAndApply(3); 
+
+        calculateNeed();
+
+        double prob = aiPredictDeadlockProb();
+        printf("[AI] Predicted deadlock probability: %.3f\n", prob);
+        printAIAnalysis(prob);
+
+        int deadlock = detectDeadlock();
+        if (deadlock) {
+            printf("[OS] Deadlock detected by detection module!\n");
+        } else {
+            printf("[OS] System is in safe state (no deadlock detected).\n");
+        }
+        printStatus(cycle_count, prob, deadlock);
+
+       
+
+
+        if (deadlock) {
+            int preempted = preemptResource();
+            calculateNeed();
+            if (detectDeadlock()) {
+                int victim = chooseVictimProcess();
+                if (victim >= 0) {
+                    terminateProcess(victim);
+                } else {
+                    printf("[RESOLUTION] No suitable victim found. (unexpected)\n");
+                }
+            } else {
+                printf("[RESOLUTION] Preemption resolved the deadlock.\n");
+            }
+        } else {
+            if (prob > 0.7) {
+                printf("[AI] High risk predicted -> applying precautionary measures.\n");
+                delayRequests();
+            } else if (prob > 0.45) {
+                printf("[AI] Moderate risk predicted -> taking light precaution (preempt 1 unit).\n");
+                preemptResource();
+            } else {
+                printf("[AI] Risk low -> normal operation.\n");
+            }
+        }
+
+        calculateNeed();
+        decayPressure();
+
+        printMatrices();
+
+        if (cycle_count < main_loop_iterations) {
+            printf("\nPress Enter to proceed to next cycle, or 'q' then Enter to quit early: ");
+            char buf[16];
+            if (!fgets(buf, sizeof(buf), stdin)) { 
+            }
+            if (fgets(buf, sizeof(buf), stdin)) {
+                if (buf[0] == 'q' || buf[0] == 'Q') {
+                    printf("User requested early quit.\n");
+                    break;
+                }
+            }
+        }
+    }
+
+    printf("\nSimulation finished. Final state:\n");
+    printMatrices();
+    printf("\nSummary per-process request count:\n");
+    for(int i=0;i<n;i++) {
+        printf("P%d : %d requests\n", i, request_count[i]);
+    }
+    printf("\nDone.\n");
+    return 0;
+}

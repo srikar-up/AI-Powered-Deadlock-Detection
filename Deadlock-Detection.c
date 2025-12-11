@@ -298,4 +298,48 @@ void printStatus(int cycle, double aiProb, int deadlockDetected) {
     else
         printf("[OS] System is in Safe State.\n");
 }
+void printAIAnalysis(double prob) {
+    printf("\n[AI-ANALYSIS] Understanding the probability calculation:\n");
 
+    long totalNeed = 0, totalAvailable = 0, totalPressure = 0;
+    int activeProcs = 0;
+
+    for (int i = 0; i < n; i++) {
+        int procNeed = 0;
+        for (int j = 0; j < m; j++) procNeed += need[i][j];
+        if (procNeed > 0) activeProcs++;
+        totalNeed += procNeed;
+    }
+
+    for (int j = 0; j < m; j++) {
+        totalAvailable += available[j];
+        totalPressure += resource_pressure[j];
+    }
+
+    double demand_ratio = (double)totalNeed / (double)(totalAvailable + 1);
+    if (demand_ratio > 5.0) demand_ratio = 5.0;
+
+    double pressure_ratio = (double)totalPressure / (double)(n + 1);
+    if (pressure_ratio > 5.0) pressure_ratio = 5.0;
+
+    double concurrency = (double)activeProcs / (double)n;
+
+    printf(" - Demand Ratio     : %.3f (need vs. available)\n", demand_ratio);
+    printf(" - Pressure Ratio   : %.3f (recent requests)\n", pressure_ratio);
+    printf(" - Concurrency      : %.3f (active processes)\n", concurrency);
+    printf(" - Final AI Score   : %.3f\n", prob);
+
+    if (prob > 0.8) {
+        printf(" [AI-ANALYSIS] CRITICAL: System is very close to deadlock.\n");
+    } else if (prob > 0.6) {
+        printf(" [AI-ANALYSIS] HIGH: Strong chance of upcoming deadlock.\n");
+    } else if (prob > 0.4) {
+        printf(" [AI-ANALYSIS] MODERATE: Some risk present.\n");
+    } else {
+        printf(" [AI-ANALYSIS] LOW: System stable.\n");
+    }
+}
+
+
+
+int main_loop_iterations = 30;

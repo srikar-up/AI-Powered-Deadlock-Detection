@@ -118,4 +118,48 @@ void printSafeSequence(int safeSeq[], int length) {
     }
     printf("\n");
 }
+int detectDeadlock() {
+    int safeSeq[MAX_PROCESSES];
+    int safe = isSafeState(safeSeq);
+
+    if (safe) {
+        printSafeSequence(safeSeq, n);
+        return 0;  
+    } else {
+        printf("[DETECTION] No safe sequence found -> System is in DEADLOCK.\n");
+        return 1;  
+    }
+}
+
+
+
+double aiPredictDeadlockProb() {
+    long totalNeed = 0;
+    long totalAvailable = 0;
+    int activeProcs = 0;
+    long totalPressure = 0;
+
+    for(int i=0;i<n;i++){
+        int procNeed = 0;
+        for(int j=0;j<m;j++) procNeed += need[i][j];
+        if (procNeed > 0) activeProcs++;
+        totalNeed += procNeed;
+    }
+    for(int j=0;j<m;j++) {
+        totalAvailable += available[j];
+        totalPressure += resource_pressure[j];
+    }
+
+    double demand_ratio = (double)totalNeed / (double)(totalAvailable + 1); 
+    if (demand_ratio > 5.0) demand_ratio = 5.0; 
+    double pressure_ratio = (double)totalPressure / (double)(n + 1); 
+    if (pressure_ratio > 5.0) pressure_ratio = 5.0;
+
+    double concurrency = (double)activeProcs / (double)n; 
+
+    double prob = 0.6 * (demand_ratio / 5.0) + 0.25 * (pressure_ratio / 5.0) + 0.15 * concurrency;
+    if (prob < 0) prob = 0;
+    if (prob > 1) prob = 1.0;
+    return prob;
+}
 

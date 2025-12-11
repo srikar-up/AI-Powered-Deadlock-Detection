@@ -52,3 +52,70 @@ void readInput() {
     memset(request_count, 0, sizeof(request_count));
     memset(resource_pressure, 0, sizeof(resource_pressure));
 }
+void calculateNeed() {
+    for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++){
+            need[i][j] = maximum[i][j] - allocation[i][j];
+            if (need[i][j] < 0) need[i][j] = 0; 
+        }
+    }
+}
+
+void printMatrices() {
+    printf("\n--- System State (Cycle %d) ---\n", cycle_count);
+    printf("\nAllocation matrix:\n");
+    for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++) printf("%3d ", allocation[i][j]);
+        printf("\n");
+    }
+    printf("\nMaximum matrix:\n");
+    for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++) printf("%3d ", maximum[i][j]);
+        printf("\n");
+    }
+    printf("\nNeed matrix:\n");
+    for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++) printf("%3d ", need[i][j]);
+        printf("\n");
+    }
+    printf("\nAvailable vector:\n");
+    for(int j=0;j<m;j++) printf("%3d ", available[j]);
+    printf("\n");
+}
+
+
+int isSafeState(int safeSeq[]) {
+    int work[MAX_RESOURCES];
+    int finish[MAX_PROCESSES];
+    for(int j=0;j<m;j++) work[j] = available[j];
+    for(int i=0;i<n;i++) finish[i] = 0;
+
+    int count = 0;
+    while (count < n) {
+        int found = 0;
+        for(int p=0;p<n;p++){
+            if (!finish[p]) {
+                int canFinish = 1;
+                for(int j=0;j<m;j++){
+                    if (need[p][j] > work[j]) { canFinish = 0; break; }
+                }
+                if (canFinish) {
+                    for(int j=0;j<m;j++) work[j] += allocation[p][j];
+                    safeSeq[count++] = p;
+                    finish[p] = 1;
+                    found = 1;
+                }
+            }
+        }
+        if (!found) break;
+    }
+    return (count == n);
+}
+void printSafeSequence(int safeSeq[], int length) {
+    printf("[DETECTION] Safe sequence: ");
+    for (int i = 0; i < length; i++) {
+        printf("P%d ", safeSeq[i]);
+    }
+    printf("\n");
+}
+
